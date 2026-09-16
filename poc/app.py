@@ -1,5 +1,6 @@
 import subprocess
 import tkinter as tk
+import html
 
 
 BACKGROUND = "#101418"
@@ -10,10 +11,10 @@ HEADER_BACKGROUND = "#202830"
 PANEL_BACKGROUND = "#2B3640"
 
 FONT_FAMILY = "DejaVu Sans"
-MESSAGE_FONT_SIZE = 72
+MESSAGE_FONT_SIZE = 48
 SPEECH_RATE = 120
 
-AUDIO_DEVICE = "default"
+AUDIO_DEVICE = "pipewire"
 
 
 class CommunicationApp:
@@ -29,7 +30,7 @@ class CommunicationApp:
         self.espeak_process = None
         self.aplay_process = None
 
-        root.title("Stroke Communication Aid — POC")
+        root.title("Stroke Communication Aid")
         root.configure(background=BACKGROUND)
         root.attributes("-fullscreen", True)
 
@@ -78,7 +79,7 @@ class CommunicationApp:
             text="Stroke Communication Aid — POC",
             background=HEADER_BACKGROUND,
             foreground=FOREGROUND,
-            font=(FONT_FAMILY, 24, "bold"),
+            font=(FONT_FAMILY, 18, "bold"),
             pady=4,
         )
         title.grid(
@@ -97,7 +98,7 @@ class CommunicationApp:
             ),
             background=HEADER_BACKGROUND,
             foreground="#DCE6EE",
-            font=(FONT_FAMILY, 17),
+            font=(FONT_FAMILY, 12),
             pady=6,
         )
         help_label.grid(
@@ -157,7 +158,7 @@ class CommunicationApp:
             text=action,
             background=PANEL_BACKGROUND,
             foreground=color,
-            font=(FONT_FAMILY, 19, "bold"),
+            font=(FONT_FAMILY, 14, "bold"),
         )
         action_label.pack()
 
@@ -166,7 +167,7 @@ class CommunicationApp:
             text=key_name,
             background=PANEL_BACKGROUND,
             foreground=FOREGROUND,
-            font=(FONT_FAMILY, 15),
+            font=(FONT_FAMILY, 11),
         )
         key_label.pack(pady=(3, 0))
 
@@ -342,6 +343,12 @@ class CommunicationApp:
     def speak_message(self) -> None:
         message = self.message.strip()
 
+        spoken_message = (
+                '<speak><break time="750ms"/>'
+                + html.escape(message)
+                + "</speak>"
+        )
+
         if not message:
             self.set_status(
                 "Type a message before speaking."
@@ -361,10 +368,11 @@ class CommunicationApp:
                 subprocess.Popen(
                     [
                         "espeak-ng",
+                        "-m",
                         "-s",
                         str(SPEECH_RATE),
                         "--stdout",
-                        message,
+                        spoken_message,
                     ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
@@ -373,12 +381,7 @@ class CommunicationApp:
 
             self.aplay_process = (
                 subprocess.Popen(
-                    [
-                        "aplay",
-                        "-q",
-                        "-D",
-                        AUDIO_DEVICE,
-                    ],
+                    ["pw-play", "--latency=500ms", "-"],
                     stdin=(
                         self.espeak_process.stdout
                     ),
