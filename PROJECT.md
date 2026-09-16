@@ -18,6 +18,13 @@ For a patient who can recognize letters and intentionally press keys, a dedicate
 
 We will consider the hypothesis supported when a user can independently compose, correct, show, speak, and clear a short message with acceptable effort and few accidental actions.
 
+Before pursuing the full product hypothesis, Milestone −1 will test two narrower assertions:
+
+1. **Constructability:** a Raspberry Pi 4 can accept remotely injected development input and a real Bluetooth keyboard, render a message legibly, and speak it with a small Python application.
+2. **Potential value:** a working demonstration is compelling enough that the patient, family, and appropriate clinical staff believe further testing is worthwhile.
+
+Milestone −1 is meant to produce evidence quickly, not production architecture. Development shortcuts are permitted when they are clearly separated from the eventual patient-use path.
+
 ## 4. Intended users and stakeholders
 
 ### Primary user
@@ -49,6 +56,19 @@ We will consider the hypothesis supported when a user can independently compose,
 8. **Fail visibly and safely.** Loss of speech audio or the second display must not destroy the typed message.
 
 ## 6. Scope
+
+### Milestone −1 proof-of-concept scope
+
+- Develop directly on a network-connected Raspberry Pi 4.
+- Use SSH for installation, code changes, launching, diagnostics, and simulated text input.
+- Feed SSH-originated text into the application as a development input channel; do not claim that SSH emulates a physical USB keyboard.
+- Pair and test a lightweight Bluetooth keyboard as the representative patient input device.
+- Display a single large, high-contrast message on one HDMI monitor.
+- Speak the current message using any readily available local text-to-speech engine.
+- Demonstrate basic correction and clearing; production-quality safeguards are not required yet.
+- Capture observations and a go/stop decision; do not build settings, automatic startup, enclosure, dual-display behavior, or clinical integrations.
+
+The proof of concept may use networking and developer intervention. Those conveniences are scaffolding and are not evidence of bedside reliability.
 
 ### Minimum viable prototype (MVP)
 
@@ -102,8 +122,9 @@ We will consider the hypothesis supported when a user can independently compose,
 | Component | MVP choice | Notes |
 |---|---|---|
 | Computer | Raspberry Pi 4 | Two micro-HDMI outputs; 4 GB RAM is ample |
-| Primary input | Compact USB keyboard | Most reliable starting point |
-| Alternate input | Lightweight Bluetooth keyboard | Reduces cables but requires charging and recovery from pairing failures |
+| POC development input | SSH from a development computer | Fast iteration and simulated text input; not a substitute for physical-keyboard validation |
+| POC patient input | Lightweight Bluetooth keyboard | Validates the intended wireless input path early |
+| MVP fallback input | Compact USB keyboard | Recovery path if Bluetooth fails |
 | Primary display | Portable HDMI monitor | Size and mounting depend on bedside position and vision |
 | Shared display | Room television via second HDMI | Requires hospital permission, compatible input, and safe cable routing |
 | Audio | Powered speaker or HDMI audio | Must be understandable at limited volume |
@@ -126,11 +147,14 @@ The Pi can drive two displays, but exact dual-display behavior and TV compatibil
 
 ### Initial technical direction
 
+- Milestone −1: network-connected development on the Pi over SSH
+- Milestone −1: a deliberately small Python demo with replaceable input, display, and speech boundaries
+- Milestone −1: SSH-originated simulated input plus direct Bluetooth keyboard input
 - Raspberry Pi OS with automatic login into a restricted application session
 - Python application with a lightweight full-screen GUI
 - Local text-to-speech engine behind an interface so it can be replaced
 - `systemd` service for automatic startup and restart
-- No web server and no network dependency for the MVP
+- Network access is permitted for proof-of-concept development; the MVP has no network dependency
 - Automated tests for message editing and commands; hardware-in-the-loop checks for keyboard, displays, and audio
 
 The implementation language and GUI toolkit are provisional. Usability and startup reliability should drive the choice.
@@ -170,13 +194,58 @@ The care team should use reliable yes/no verification and supported-conversation
 
 - The screen may expose sensitive health or family information to roommates, visitors, or passersby.
 - Transcripts should remain only in memory and disappear on clear or shutdown unless the patient explicitly requests future saving.
-- Network services should be disabled unless required and reviewed.
+- Network and SSH are permitted during development, with access limited to the developer-controlled network and credentials. They should be disabled or explicitly reviewed before bedside use.
 - Bluetooth availability and policy vary by facility; USB must remain a fallback.
 - Equipment must be cleanable and positioned without obstructing care.
 - The project team should obtain advice before describing or deploying the system as a medical device.
 - Any future storage, remote access, clinical integration, or cloud speech feature requires a separate privacy and security review.
 
 ## 13. Milestones
+
+### Milestone −1 — Fail-fast proof of concept
+
+**Question:** Is a keyboard-to-large-text-to-speech appliance both constructable and plausibly valuable?
+
+Build the thinnest demonstrable vertical slice:
+
+- Raspberry Pi 4 connected to a development network
+- Python demo application launched and observed on the Pi
+- SSH used for development, diagnostics, and simulated message input
+- Bluetooth keyboard paired and used for direct message entry
+- One HDMI display showing large, high-contrast text
+- Text-to-speech for the current message
+- Minimal correction and clear actions
+- No automatic startup, dual-display work, polished settings, enclosure, transcript storage, or reliability engineering
+
+Run two demonstrations:
+
+1. **Construction demonstration:** enter, correct, display, speak, and clear “I need some water” through SSH and then through the Bluetooth keyboard.
+2. **Value demonstration:** show the working loop to the patient, family, and—when feasible—an SLP, OT, nurse, or other appropriate clinician. Ask whether this warrants a supervised patient trial and what would prevent its use.
+
+Record:
+
+- Pi model, OS version, keyboard model, display, speaker, and speech engine
+- Setup time and failures
+- Input-to-display responsiveness
+- Bluetooth pairing and reconnection behavior
+- Whether the spoken message is understandable
+- Stakeholder reactions, limitations, and proposed changes
+
+**Pass criteria:**
+
+- Both SSH-simulated and Bluetooth-keyboard input can complete the full message loop.
+- Text is immediately readable and speech is understandable in a quiet-room demonstration.
+- At least one intended stakeholder judges the concept valuable enough for a supervised next test.
+- No discovered constraint makes the concept clearly inappropriate for the intended patient.
+
+**Stop or pivot criteria:**
+
+- The intended patient cannot reliably use keyboard-based input, even with reasonable adaptations.
+- A language, visual, cognitive, positioning, policy, or safety barrier makes this form of interaction unsuitable.
+- The demonstration provides no meaningful advantage over available low-tech or tablet-based AAC.
+- Construction or operation is disproportionately complex for the benefit observed.
+
+**Exit decision:** explicitly choose **proceed**, **pivot**, or **stop**, with the evidence behind the decision. Passing Milestone −1 proves feasibility and potential value only; it does not establish clinical effectiveness, safety, or bedside readiness.
 
 ### Milestone 0 — Needs validation
 
@@ -218,6 +287,8 @@ The care team should use reliable yes/no verification and supported-conversation
 
 ## 14. MVP acceptance criteria
 
+These criteria apply after Milestone −1. The fail-fast proof of concept uses its own narrower pass and stop criteria above.
+
 - The application is ready for typing within 30 seconds of power-on.
 - Core features work with networking disabled.
 - Keystrokes appear with no distracting perceptible delay.
@@ -243,6 +314,7 @@ Targets should be revised after observation with the intended user and clinical 
 
 ### Hardware tests
 
+- SSH-originated simulated input during Milestone −1 only
 - Supported USB and Bluetooth keyboards
 - Bluetooth disconnect/reconnect behavior
 - One and two HDMI displays at common resolutions
@@ -288,11 +360,11 @@ Targets should be revised after observation with the intended user and clinical 
 
 ## 18. First implementation increment
 
-**Objective:** On a development computer or Raspberry Pi, implement a single full-screen view that accepts USB-keyboard input, displays it in adjustable high-contrast text, speaks it on command through an offline speech adapter, and protects clearing behind confirmation.
+**Objective:** Complete Milestone −1 on a network-connected Raspberry Pi 4. Build the smallest Python application that accepts SSH-originated simulated input and direct Bluetooth-keyboard input, displays the message in large high-contrast text on one HDMI screen, and speaks it on command.
 
-**Design check:** Ask an SLP or OT to review the proposed interaction and keyboard before optimizing the hardware enclosure or adding predictive features.
+**Design check:** Keep SSH input, physical keyboard input, display, and speech as separate boundaries, even if their first implementations are minimal. This prevents development scaffolding from becoming an accidental product dependency.
 
-**Validation target:** In a supervised tabletop rehearsal, the intended user—or an appropriate proxy during early engineering—can type “I need some water,” correct one intentional error, speak the message, repeat it, and clear it without developer assistance.
+**Validation target:** Demonstrate “I need some water” end to end through SSH and again through the Bluetooth keyboard. Record construction results and stakeholder reaction, then make an explicit proceed, pivot, or stop decision before adding features.
 
 ## 19. Definition of project success
 
