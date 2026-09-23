@@ -1,4 +1,10 @@
-# PROJECT — Stroke Communication Aid
+# PROJECT — AWW-Some Blackboard
+
+**Project type:** Raspberry Pi-based stroke communication aid  
+**Current platform:** Raspberry Pi 4, ROADOM 10.1-inch HDMI display, and HXMJ Large Print Mini Bluetooth Keyboard  
+**Project status:** Working appliance proof of concept; human-centered validation and enclosure work remain  
+**Product name:** AWW-Some Blackboard (AWW are the family stroke patient's initials)  
+**Last updated:** 2026-09-23
 
 ## 1. Project purpose
 
@@ -18,12 +24,12 @@ For a patient who can recognize letters and intentionally press keys, a dedicate
 
 We will consider the hypothesis supported when a user can independently compose, correct, show, speak, and clear a short message with acceptable effort and few accidental actions.
 
-Before pursuing the full product hypothesis, Milestone −1 will test two narrower assertions:
+Milestone −1 tested two narrower assertions before further product development:
 
 1. **Constructability:** a Raspberry Pi 4 can accept remotely injected development input and a real Bluetooth keyboard, render a message legibly, and speak it with a small Python application.
 2. **Potential value:** a working demonstration is compelling enough that the patient, family, and appropriate clinical staff believe further testing is worthwhile.
 
-Milestone −1 is meant to produce evidence quickly, not production architecture. Development shortcuts are permitted when they are clearly separated from the eventual patient-use path.
+Milestone −1 was meant to produce evidence quickly, not production architecture. The construction assertion has now been demonstrated: the Raspberry Pi accepts Bluetooth-keyboard input, displays wrapped large text, and speaks the message locally. A supervised value demonstration with the family stroke patient and appropriate clinical staff remains necessary before claiming patient benefit.
 
 ## 4. Intended users and stakeholders
 
@@ -70,10 +76,24 @@ Milestone −1 is meant to produce evidence quickly, not production architecture
 
 The proof of concept may use networking and developer intervention. Those conveniences are scaffolding and are not evidence of bedside reliability.
 
+### Current working prototype
+
+The project has progressed beyond the original Milestone −1 technical scope. The current appliance:
+
+- Boots Raspberry Pi OS Desktop and launches `poc/app.py` automatically through the desktop session.
+- Accepts direct input from the HXMJ Large Print Mini Bluetooth Keyboard.
+- Displays large, centered, high-contrast text with automatic multiline wrapping.
+- Speaks the complete visible message through the ROADOM display's HDMI speakers.
+- Uses a slower speech rate and an audio warm-up to reduce first-utterance clipping.
+- Uses single-key patient controls: `Enter` speaks or stops speech, and two presses of `Delete` clear the message.
+- Keeps message content in memory rather than creating a transcript.
+- Can be maintained over SSH and updated from GitHub using an SSH key.
+- Has been rebuilt from a newly imaged SD card, providing an early reproducibility test of the setup instructions.
+
 ### Minimum viable prototype (MVP)
 
 - Boot directly into a full-screen communication application
-- Accept USB keyboard input first; support Bluetooth after boot reliability is proven
+- Accept the paired Bluetooth keyboard, with USB available as a recovery input
 - Show the current message in large, high-contrast text
 - Mirror the interface to both HDMI outputs when a second display is connected
 - Permit typing, cursor movement, Backspace, and an Undo action
@@ -117,20 +137,20 @@ The proof of concept may use networking and developer intervention. Those conven
 - As a caregiver, I can tell whether the keyboard, audio, and second display are working.
 - As a therapist, I can adjust the interface to the patient's motor and visual needs.
 
-## 8. Proposed hardware
+## 8. Hardware configuration
 
 | Component | MVP choice | Notes |
 |---|---|---|
 | Computer | Raspberry Pi 4 | Two micro-HDMI outputs; 4 GB RAM is ample |
 | POC development input | SSH from a development computer | Fast iteration and simulated text input; not a substitute for physical-keyboard validation |
-| POC patient input | Lightweight Bluetooth keyboard | Validates the intended wireless input path early |
+| Patient input | HXMJ Large Print Mini Bluetooth Keyboard | Compact, high-contrast keyboard selected to reduce one-handed reach |
 | MVP fallback input | Compact USB keyboard | Recovery path if Bluetooth fails |
-| Primary display | Portable HDMI monitor | Size and mounting depend on bedside position and vision |
+| Primary display | ROADOM 10.1-inch, 1024×600 HDMI touchscreen | Touch is not required; built-in speakers provide HDMI audio |
 | Shared display | Room television via second HDMI | Requires hospital permission, compatible input, and safe cable routing |
-| Audio | Powered speaker or HDMI audio | Must be understandable at limited volume |
+| Audio | ROADOM HDMI speakers | Working, but available volume should be validated in the intended room |
 | Storage | High-quality microSD or SSD | Read-only or resilient configuration should be explored |
 | Power | Approved Pi power supply | Facility review may be required |
-| Mounting | Stable, cleanable stand/tray | Must not interfere with treatment or create a hazard |
+| Mounting | Planned 3D-printed enclosure with handle | Include a deliberate shutdown control; no front speaker vents are planned |
 
 The Pi can drive two displays, but exact dual-display behavior and TV compatibility should be tested with the intended Raspberry Pi OS release, resolution, adapters, and room hardware.
 
@@ -145,35 +165,40 @@ The Pi can drive two displays, but exact dual-display behavior and TV compatibil
 - **Settings service:** stores accessibility preferences, not conversations.
 - **Health/status service:** reports keyboard, display, audio, and startup state.
 
-### Initial technical direction
+### Implemented technical direction
 
 - Milestone −1: network-connected development on the Pi over SSH
 - Milestone −1: a deliberately small Python demo with replaceable input, display, and speech boundaries
 - Milestone −1: SSH-originated simulated input plus direct Bluetooth keyboard input
-- Raspberry Pi OS with automatic login into a restricted application session
-- Python application with a lightweight full-screen GUI
-- Local text-to-speech engine behind an interface so it can be replaced
-- `systemd` service for automatic startup and restart
+- Raspberry Pi OS Desktop, currently based on Debian Trixie
+- Python/Tkinter full-screen application in `poc/app.py`
+- Local `espeak-ng` text-to-speech
+- PipeWire HDMI audio routed to the ROADOM display
+- Desktop autologin with a labwc autostart entry for application startup
+- Bluetooth keyboard input through the Linux input stack
+- `keyd` remapping for a nonstandard HXMJ key, backed by a logind power-key safety rule
+- GitHub SSH access for source control without account-password authentication
 - Network access is permitted for proof-of-concept development; the MVP has no network dependency
 - Automated tests for message editing and commands; hardware-in-the-loop checks for keyboard, displays, and audio
 
-The implementation language and GUI toolkit are provisional. Usability and startup reliability should drive the choice.
+The application source is stored in the `stroke-communication-aid` Git repository. On the current appliance, the working checkout is `/home/an/projects/stroke-communication-aid`, the host name is `awwsome`, and the application path is `poc/app.py`.
 
-## 10. Interaction proposal
+## 10. Current interaction
 
-The default screen contains one large message area and a small status strip. The patient types normally. Proposed controls for the first test:
+The default screen contains a compact title/help area and one large, centered message area. Controls intentionally avoid combinations such as `Ctrl` plus another key or `Fn` plus a function key.
 
 | Action | Initial control | Design concern |
 |---|---|---|
 | Type | Letter, number, punctuation keys | Ignore unintended key repeat where appropriate |
-| Correct | Backspace and arrow keys | Make cursor visually prominent |
-| Speak | Enter | Prevent accidental activation during multiline entry |
-| Repeat speech | F5 or configurable large key | Needs a label or key cover |
-| Stop speech | Escape | Must respond immediately |
-| Clear | Hold a designated key, then confirm | Never use a single easy-to-hit key |
-| Increase/decrease text | Dedicated keys or caregiver settings | Avoid complex shortcuts for the patient |
+| Correct | Backspace | Removes the preceding character |
+| Speak | Enter | Speaks the complete visible message |
+| Stop speech | Enter while speech is active | Same large, easy-to-find key |
+| Repeat speech | Enter after speech completes | Repeats the unchanged message |
+| Clear | Delete twice | First press arms clear; second confirms it |
 
-These mappings are hypotheses, not settled requirements. Observe actual use before finalizing them. A keyboard with large-print key stickers, keyguard, reduced key set, or programmable external buttons may be more effective than a standard compact keyboard.
+These mappings work in the current POC but remain hypotheses until observed with the intended user. The HXMJ keyboard's nonstandard key reports either `KEY_POWER` or `Left Meta`+`L`, depending on keyboard mode. The appliance uses `keyd` to translate both forms into `Delete`, and configures systemd-logind to ignore power-key events as a fail-safe against accidental shutdown.
+
+The remapping is tied to the stable device ID `04e8:7021:ed42078f`, not `/dev/input/event6`; Linux event numbers can change after reboot or reconnection. On Debian Trixie the packaged executable is `/usr/bin/keyd.rvaiya`, and this version does not provide a `check` command. Configuration is applied with `sudo /usr/bin/keyd.rvaiya reload` and verified through `evtest` on the `keyd virtual keyboard` device.
 
 ## 11. Clinical and usability considerations
 
@@ -195,6 +220,7 @@ The care team should use reliable yes/no verification and supported-conversation
 - The screen may expose sensitive health or family information to roommates, visitors, or passersby.
 - Transcripts should remain only in memory and disappear on clear or shutdown unless the patient explicitly requests future saving.
 - Network and SSH are permitted during development, with access limited to the developer-controlled network and credentials. They should be disabled or explicitly reviewed before bedside use.
+- SSH access to the Pi uses public-key authentication for normal administration. GitHub access uses a separate repository key so interactive account passwords are not stored or entered on the appliance.
 - Bluetooth availability and policy vary by facility; USB must remain a fallback.
 - Equipment must be cleanable and positioned without obstructing care.
 - The project team should obtain advice before describing or deploying the system as a medical device.
@@ -206,7 +232,7 @@ The care team should use reliable yes/no verification and supported-conversation
 
 **Question:** Is a keyboard-to-large-text-to-speech appliance both constructable and plausibly valuable?
 
-Build the thinnest demonstrable vertical slice:
+The thinnest demonstrable vertical slice has been built:
 
 - Raspberry Pi 4 connected to a development network
 - Python demo application launched and observed on the Pi
@@ -215,12 +241,12 @@ Build the thinnest demonstrable vertical slice:
 - One HDMI display showing large, high-contrast text
 - Text-to-speech for the current message
 - Minimal correction and clear actions
-- No automatic startup, dual-display work, polished settings, enclosure, transcript storage, or reliability engineering
+- Automatic desktop-session startup has also been added after the original construction test
 
-Run two demonstrations:
+Demonstration status:
 
-1. **Construction demonstration:** enter, correct, display, speak, and clear “I need some water” through SSH and then through the Bluetooth keyboard.
-2. **Value demonstration:** show the working loop to the patient, family, and—when feasible—an SLP, OT, nurse, or other appropriate clinician. Ask whether this warrants a supervised patient trial and what would prevent its use.
+1. **Construction demonstration — passed:** enter, correct, display, speak, repeat, stop, and clear a message through the Bluetooth keyboard. Multiline wrapping, automatic startup, and HDMI audio are also working.
+2. **Value demonstration — pending:** show the working loop to the family stroke patient and, when feasible, an SLP, OT, nurse, or other appropriate clinician. Ask whether this warrants a supervised patient trial and what would prevent its use.
 
 Record:
 
@@ -245,7 +271,7 @@ Record:
 - The demonstration provides no meaningful advantage over available low-tech or tablet-based AAC.
 - Construction or operation is disproportionately complex for the benefit observed.
 
-**Exit decision:** explicitly choose **proceed**, **pivot**, or **stop**, with the evidence behind the decision. Passing Milestone −1 proves feasibility and potential value only; it does not establish clinical effectiveness, safety, or bedside readiness.
+**Current exit decision:** **proceed cautiously** with supervised validation and appliance hardening. Technical feasibility is established. Potential clinical value is plausible but not yet established by a structured patient or clinician evaluation. This does not establish clinical effectiveness, safety, or bedside readiness.
 
 ### Milestone 0 — Needs validation
 
@@ -265,6 +291,8 @@ Record:
 
 **Exit criterion:** a user can complete the type → read → speak → correct → clear loop during a supervised session.
 
+**Technical status:** substantially complete on the bench. The required user-supervised exit test remains.
+
 ### Milestone 2 — Bedside prototype
 
 - Reliable automatic startup
@@ -275,6 +303,8 @@ Record:
 - Clear fault/status indications
 
 **Exit criterion:** repeated bedside rehearsals succeed without developer intervention.
+
+**Current progress:** automatic launch, Bluetooth input, HDMI display, and HDMI speech are working. Remaining work includes power-loss protection, a deliberate shutdown switch, enclosure and cable design, USB recovery testing, second-display validation, and repeated no-developer rehearsals.
 
 ### Milestone 3 — Guided pilot
 
@@ -320,6 +350,8 @@ Targets should be revised after observation with the intended user and clinical 
 - One and two HDMI displays at common resolutions
 - HDMI and external-speaker audio
 - Cold boot, repeated reboot, and abrupt power interruption
+- Verify `keyd` remapping after boot, keyboard sleep, disconnect, recharge, and reconnection
+- Verify that the physical shutdown control cannot be triggered by ordinary typing
 - Operation with all networking disabled
 
 ### Human-centered validation
@@ -337,12 +369,13 @@ Targets should be revised after observation with the intended user and clinical 
 |---|---|
 | Typing is impaired or language formulation is difficult | Evaluate with SLP/OT; support other AAC methods |
 | Bluetooth fails or keyboard battery dies | Keep a cleanable USB keyboard available |
+| HXMJ special key sends a power event or system shortcut | Device-specific `keyd` remap plus logind power-key ignore rule; verify after every rebuild |
 | Accidental key presses alter or erase text | Undo, debounce/key-repeat controls, protected clear |
 | Patient tires quickly | Adjustable placement, short sessions, minimal actions |
 | Message is visible to unintended people | Privacy mode, deliberate screen placement, no history |
 | Speech is too quiet or unclear | Volume/speed controls, tested local voices, visible text remains primary |
 | TV input is unavailable or prohibited | Treat second display as optional, never required |
-| Power loss corrupts the device | Resilient filesystem, tested recovery, controlled shutdown where possible |
+| Power loss corrupts the microSD filesystem | Add a deliberate shutdown switch, enable overlay/read-only protection after configuration is stable, and test abrupt-power recovery |
 | Prototype is mistaken for a nurse-call system | Prominent boundary and continued access to approved call controls |
 
 ## 17. Open questions
@@ -358,14 +391,38 @@ Targets should be revised after observation with the intended user and clinical 
 9. Will the hospital permit the Pi, Bluetooth, external power, speakers, and TV connection?
 10. What communication method remains available if the device fails?
 
-## 18. First implementation increment
+## 18. Current implementation increment
 
-**Objective:** Complete Milestone −1 on a network-connected Raspberry Pi 4. Build the smallest Python application that accepts SSH-originated simulated input and direct Bluetooth-keyboard input, displays the message in large high-contrast text on one HDMI screen, and speaks it on command.
+**Objective:** Turn the working POC into a repeatable, safer appliance without expanding the communication interface prematurely.
 
-**Design check:** Keep SSH input, physical keyboard input, display, and speech as separate boundaries, even if their first implementations are minimal. This prevents development scaffolding from becoming an accidental product dependency.
+**Near-term work:**
 
-**Validation target:** Demonstrate “I need some water” end to end through SSH and again through the Bluetooth keyboard. Record construction results and stakeholder reaction, then make an explicit proceed, pivot, or stop decision before adding features.
+1. Correct the setup documentation so the Trixie `keyd` instructions use the supported `reload` command and do not use the unavailable `check` command.
+2. Confirm cold-boot application startup, keyboard reconnection, remapping, audio routing, and first-utterance behavior on the rebuilt Pi.
+3. Add and test a clearly labeled physical control that requests a graceful shutdown rather than directly cutting power.
+4. After the software and device configuration are stable, evaluate Raspberry Pi overlay/read-only filesystem protection and test recovery from abrupt power removal.
+5. Measure the Pi, ROADOM display, connectors, cable bends, and shutdown control before producing a Pi 4 enclosure design with a carry handle and the engraved name “AWW-Some Blackboard.”
+6. Run the structured value demonstration with the family stroke patient and seek SLP/OT or other appropriate clinical feedback.
 
-## 19. Definition of project success
+**Validation target:** A caregiver can power on the unit, wait for the communication screen, type and speak a multiline message, clear it deliberately, and shut the unit down safely without SSH or developer intervention.
+
+## 19. Rebuild and configuration record
+
+The Pi has been intentionally reimaged and rebuilt from scratch as an early test of project reproducibility. Important implementation facts that must remain in the setup documentation are:
+
+- Appliance host name: `awwsome` (normally reached as `awwsome.local` when local name resolution is available)
+- Application checkout: `/home/an/projects/stroke-communication-aid`
+- Application entry point: `poc/app.py`
+- Git remote transport: SSH using a dedicated GitHub key such as `~/.ssh/awwsome_github`
+- Bluetooth keyboard device ID: `04e8:7021:ed42078f`
+- Current keyboard input event path observed during setup: `/dev/input/event6` (diagnostic only; do not encode this changing path in configuration)
+- `keyd` executable on the installed Trixie package: `/usr/bin/keyd.rvaiya`
+- HXMJ remapping file: `/etc/keyd/hxmj.conf`
+- Power-key fail-safe file: `/etc/systemd/logind.conf.d/awwsome-keyboard.conf`
+- Audio path: PipeWire to the HDMI sink associated with the ROADOM display
+
+The source repository is the authoritative location for application and documentation changes. Local IDE metadata and host-specific connection files should not be treated as portable project configuration.
+
+## 20. Definition of project success
 
 Success is not the number of features. Success is a patient being able to communicate an intended message more independently, accurately, comfortably, and reliably—while retaining control over what is displayed and spoken.
