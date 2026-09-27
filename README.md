@@ -1,103 +1,158 @@
 # Stroke Communication Aid
 
-An offline-first Raspberry Pi communication aid for people whose speech and handwriting have been affected by a stroke.
+An offline-first Raspberry Pi communication aid for people whose speech
+and handwriting have been affected by a stroke.
 
-The patient types with one or more fingers on a lightweight Bluetooth or USB keyboard. The Raspberry Pi displays the message in very large, high-contrast text on its local screen and, when available, mirrors it to a hospital-room television. The completed message can also be spoken aloud using text-to-speech.
+The current appliance uses a **Raspberry Pi 4**, **JUNEBOX 8-inch
+1280×800 HDMI touchscreen with built-in speakers**, and **HXMJ Large
+Print Mini Bluetooth Keyboard**. The patient types a message, sees it in
+large high-contrast text, and can have it spoken locally with eSpeak NG.
 
-> **Project status:** concept and prototype planning. This is an assistive communication tool, not a medical device, diagnostic system, emergency-call system, or replacement for evaluation by a speech-language pathologist (SLP), occupational therapist, or the clinical care team.
+> **Status:** working communication appliance under active hardening and
+> validation. It is not a medical device, diagnostic system,
+> emergency-call system, or replacement for an SLP, OT, nurse-call
+> system, or clinical care team.
 
-## Why this project
+## Current patient controls
 
-A handheld whiteboard may be difficult to use when a stroke affects fine motor control, grip, coordination, language, vision, or attention. A physical keyboard can reduce the precision required to form letters by hand while preserving the patient's ability to compose their own message.
+  Control          Action
+  ---------------- ----------------------------
+  Character keys   Type
+  Backspace        Correct previous character
+  Left / Right     Move cursor
+  Enter            Speak / stop / repeat
+  Delete twice     Clear message
+  Esc/Homepage     Toggle Help
+  F10              Mute / unmute
+  F11 / F12        Volume down / up
 
-Typing is not suitable for every stroke survivor. Aphasia can affect reading, spelling, word retrieval, or comprehension even when the person's intelligence and ideas are intact. The design must therefore support typing without assuming that typing alone solves every communication need.
+The Help screen uses three large panels: **Edit Commands**, **Speech
+Controls**, and **Troubleshooting**. It includes keyboard reconnection
+and power-cycle recovery instructions.
 
-## Proposed first version
+## Hardware
 
-- Raspberry Pi 4 with Raspberry Pi OS
-- Compact Bluetooth keyboard, with USB keyboard fallback
-- One local HDMI display
-- Optional second HDMI connection to a television
-- Full-screen, high-contrast message display
-- Large, adjustable text
-- Simple keyboard-only controls
-- Offline text-to-speech through a speaker or the display audio output
-- No account, cloud service, or patient-data collection
+-   Raspberry Pi 4
+-   JUNEBOX 8-inch 1280×800 HDMI touchscreen
+-   HXMJ Large Print Mini Bluetooth Keyboard
+-   microSD card
+-   HDMI and USB touch/data connections
+-   Suitable power supply arrangement
+-   Optional USB keyboard for recovery
 
-## Basic interaction
+The JUNEBOX touchscreen appears as `TSTP MTouch`. Normal communication
+does not require touch, but touch remains available for setup and
+caregiver recovery.
 
-1. The device starts directly in the communication screen.
-2. The patient types a message.
-3. Text appears immediately in a large, readable format on both displays.
-4. The patient presses a large, easy-to-find key (initially `Enter`) to speak the message.
-5. The patient presses another deliberate shortcut to clear the message.
+## Software
 
-The exact controls must be tested with patients and therapists. Accidental clearing should be difficult, and typing should never require key combinations for normal use.
+-   Raspberry Pi OS Desktop / Debian Trixie
+-   Python 3 + Tkinter
+-   eSpeak NG
+-   PipeWire / `pw-play`
+-   BlueZ / `bluetoothctl`
+-   `keyd` / `/usr/bin/keyd.rvaiya`
+-   `evtest`
+-   labwc desktop autostart
+-   Git/GitHub
 
-## Feasibility
+Application entry point:
 
-The core concept is technically straightforward. A Raspberry Pi 4 can:
-
-- accept Bluetooth and USB keyboard input;
-- drive two HDMI displays;
-- mirror a full-screen application;
-- synthesize speech locally; and
-- start the application automatically at boot.
-
-The principal risks are human rather than computational: fatigue, one-handed reach, tremor, visual-field loss, cognitive load, aphasia, accidental keystrokes, keyboard pairing failures, and hospital infection-control requirements. A successful prototype therefore needs early review by an SLP, an occupational therapist, nursing staff, and—most importantly—people with lived stroke experience.
-
-## Suggested prototype architecture
-
-```text
-Bluetooth/USB keyboard
-          |
-          v
- Raspberry Pi application ---> Offline text-to-speech ---> Speaker/HDMI audio
-          |
-          +----> Local display (mirrored) ----> Room television
+``` text
+poc/app.py
 ```
 
-For the first prototype, a small Python application using a simple full-screen GUI is sufficient. The input and display logic should not depend on a network connection. Speech should use a locally installed engine. Technology choices should remain replaceable until usability testing establishes the actual needs.
+## HXMJ keyboard normalization
 
-## Accessibility principles
+The HXMJ multifunction Delete-position key has been observed to emit
+several raw events. The tested appliance uses:
 
-- Patient-controlled: never speak or clear a message without an intentional action.
-- Low effort: ordinary message entry should require only single-key presses.
-- Forgiving: support Backspace, Undo, and protection against accidental clearing.
-- Legible: adjustable text size, high contrast, generous spacing, and minimal clutter.
-- Private: show only the current message by default; do not retain transcripts by default.
-- Reliable: operate offline and accept a wired keyboard when Bluetooth is unavailable.
-- Adaptable: allow left- or right-side keyboard placement and future alternative inputs.
-- Respectful: do not infer, rewrite, or “correct” the patient's meaning without consent.
+``` ini
+[ids]
+04e8:7021
 
-## Safety and privacy boundaries
-
-- Do not rely on the device for urgent calls to staff or emergency services.
-- Keep an established nurse-call method accessible.
-- Do not store conversation history in the first version.
-- Avoid cloud speech or AI services unless later versions add explicit consent and appropriate privacy safeguards.
-- Confirm that cables, stands, power supplies, and keyboard placement do not create fall, entanglement, or care-access hazards.
-- Follow the facility's cleaning, electrical-equipment, wireless-device, and infection-control policies.
-
-## Repository direction
-
-```text
-stroke-communication-aid/
-├── README.md
-├── PROJECT.md
-├── app/
-├── tests/
-├── scripts/
-├── docs/
-└── hardware/
+[main]
+leftmeta+l = delete
+coffee = delete
+power = delete
+sysrq = noop
 ```
 
-No application code has been selected or created yet. See [PROJECT.md](PROJECT.md) for the product definition, scope, milestones, risks, and validation plan.
+On this Trixie `keyd.rvaiya` build, Linux `KEY_SCREENLOCK` is named
+`coffee`. F4 emits `KEY_SYSRQ`, so `sysrq = noop` prevents a screenshot
+popup. F10/F11/F12 remain useful audio controls.
 
-## Immediate next step
+Restricting `keyd` to `04e8:7021` is important: an unrestricted
+configuration can interfere with the JUNEBOX `TSTP MTouch` touchscreen.
 
-Build a tabletop proof of concept using a Pi, one keyboard, one monitor, and a speaker. Validate only the essential loop: **type → read → speak → correct → clear**. Before expanding it, observe whether a potential user can complete that loop comfortably and reliably.
+If the Bluetooth keyboard sleeps and does not reconnect, switch it off,
+wait about five seconds, and switch it back on.
 
-## Working name
+## Run
 
-“Stroke Communication Aid” is a descriptive placeholder. A future name should emphasize the person's voice and agency rather than their diagnosis.
+From the Pi desktop:
+
+``` bash
+python3 poc/app.py
+```
+
+From SSH while the graphical desktop is active:
+
+``` bash
+DISPLAY=:0 python3 poc/app.py
+```
+
+Check syntax first with:
+
+``` bash
+python3 -m py_compile poc/app.py
+```
+
+## Automatic startup
+
+The appliance uses Desktop Autologin and labwc. The autostart entry is:
+
+``` bash
+(sleep 3; /usr/bin/python3 /home/an/projects/stroke-communication-aid/poc/app.py >> /home/an/strokecom-startup.log 2>&1) &
+```
+
+The delay allows the display and user PipeWire session to initialize.
+
+## Audio
+
+The JUNEBOX speakers work through Pi HDMI0. During diagnosis, ALSA card
+0 was the working HDMI path. The application uses eSpeak NG piped to
+`pw-play`; system/display volume may both need adjustment.
+
+## Power and recovery
+
+After Linux shutdown, the JUNEBOX power button does not reliably
+cold-start the halted Pi. The tested recovery is:
+
+1.  Unplug external power.
+2.  Wait about 5 seconds.
+3.  Reconnect power.
+4.  Wait for Stroke Communication Aid to start.
+
+Overlay/read-only root and boot protection is the next
+filesystem-hardening step after the current configuration and
+documentation are committed and cold-boot tested.
+
+## Repository
+
+-   `README.md` --- quick current-state overview
+-   `PROJECT.md` --- product definition, design decisions, milestones,
+    risks, and rebuild record
+-   `HACKSTER.md` --- build-story/tutorial draft
+-   `poc/app.py` --- current application
+-   `art/` --- screenshots and project images
+
+Core communication is offline and message text is kept in memory rather
+than stored as a transcript by default.
+
+## Safety boundary
+
+Do not use this device as an emergency or nurse-call system. Keep an
+approved call control and another communication method available.
+Keyboard suitability and interface choices must be validated with the
+individual user and appropriate clinical staff.
