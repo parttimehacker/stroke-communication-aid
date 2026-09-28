@@ -32,7 +32,10 @@ class CommunicationApp:
         self.aplay_process = None
 
         root.title("Stroke Communication Aid")
-        root.configure(background=BACKGROUND)
+        root.configure(
+            background=BACKGROUND,
+            cursor="none",
+        )
         root.attributes("-fullscreen", True)
 
         root.grid_rowconfigure(0, weight=0)
