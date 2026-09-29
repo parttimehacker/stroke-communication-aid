@@ -37,6 +37,8 @@ class CommunicationApp:
             cursor="none",
         )
         root.attributes("-fullscreen", True)
+        root.attributes("-topmost", True)
+        root.focus_force()
 
         root.grid_rowconfigure(0, weight=0)
         root.grid_rowconfigure(1, weight=0)
@@ -47,6 +49,8 @@ class CommunicationApp:
         self.create_status()
         self.create_message_display()
         self.create_help_display()
+
+        root.bind("<Escape>", self.show_help)
 
         root.bind_all(
             "<KeyPress>",
