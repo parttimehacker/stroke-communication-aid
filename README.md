@@ -88,6 +88,13 @@ configuration can interfere with the JUNEBOX `TSTP MTouch` touchscreen.
 If the Bluetooth keyboard sleeps and does not reconnect, switch it off,
 wait about five seconds, and switch it back on.
 
+## Prepare a new microSD card
+
+Use Raspberry Pi Imager to install Raspberry Pi OS **with the desktop**.
+Follow the [imaging and first-boot instructions](HACKSTER.md#image-the-microsd-card-with-raspberry-pi-imager)
+before installing the application. They cover storage-erasure precautions,
+OS selection, account/network setup, optional SSH, and desktop checks.
+
 ## Run
 
 From the Pi desktop:
