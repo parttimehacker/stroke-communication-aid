@@ -232,8 +232,99 @@ JUNEBOX, keyboard, power connections, HDMI cable, and touch USB cable.
 
 ## Prepare Raspberry Pi OS
 
-Install Raspberry Pi OS with Desktop and configure a user account,
-hostname, Wi-Fi or Ethernet, and SSH.
+### Image the microSD card with Raspberry Pi Imager
+
+These instructions prepare a **microSD card** for the Pi 4's card slot.
+A USB SSD is a different boot device; it is not required for this build.
+Keep an existing working card as a recovery copy when possible.
+
+**Writing an image erases the selected storage device.** Back up anything
+needed first and check the selected device carefully before confirming.
+
+1. Install [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+   on your development computer and insert the microSD card into a reader.
+2. Select **Raspberry Pi 4** as the device.
+3. Choose **Raspberry Pi OS (64-bit)** with the desktop. Check the edition
+   description: it must include the graphical desktop. **Lite** does not
+   include it. The Full edition's extra applications are unnecessary here.
+4. Select the microSD card by its name and capacity. Keep system drives
+   excluded; disconnect unrelated removable drives if identification is
+   uncertain.
+5. In OS customisation, set a hostname, your local time zone and keyboard
+   layout, and your own username and password. Configure Wi-Fi, or use
+   Ethernet for setup.
+6. Review the settings, write the image, and let verification finish
+   successfully before ejecting the card.
+
+Imager screen labels can change. See the official
+[Imager installation guide](https://www.raspberrypi.com/documentation/computers/getting-started.html#install-using-imager)
+for the current screens.
+
+**OS baseline:** The appliance record uses Raspberry Pi OS Desktop based
+on Debian Trixie. Raspberry Pi's
+[OS edition and architecture guide](https://www.raspberrypi.com/documentation/computers/os.html)
+also identifies Trixie as the current release at this documentation update
+(2026-10-03). The 64-bit desktop image is suitable for Pi 4, but the
+repository does not record the original image date or architecture.
+Record the image edition, release date, and architecture you actually
+install. This addition has not been validated by imaging or booting a Pi;
+a newer image still needs the keyboard, audio, and startup tests below.
+
+The desktop is needed because `poc/app.py` creates a Tkinter window and
+the appliance starts it from a graphical login session. Installing only
+a command-line OS does not provide that setup.
+
+### Optional SSH access during setup
+
+For maintenance from your development computer, enable SSH in Imager's
+Remote Access settings and choose public-key authentication. Supply
+**only your SSH public key** (the `.pub` file); keep its private key on
+your development computer. If you have no key yet, follow Raspberry Pi's
+[SSH setup instructions](https://www.raspberrypi.com/documentation/computers/remote-access.html#access-a-remote-terminal-with-ssh).
+You can leave SSH disabled and finish setup locally instead.
+
+Enter account and Wi-Fi passwords yourself in Imager. Do not put
+passwords, private keys, or exported credential-bearing settings in this
+repository. Use a trusted setup network and review whether SSH should
+remain enabled before bedside use.
+
+The existing examples use hostname `awwsome` and username `an`.
+Choose your own values and replace `/home/an` throughout the remaining
+commands, including the autostart entry.
+
+### First boot and desktop checks
+
+With the Pi powered off, insert the card and connect the JUNEBOX display
+as described above. Use a wired USB keyboard and mouse for initial setup;
+pair the HXMJ keyboard later. Power on and allow initial setup to finish,
+including any requested restart. Complete any remaining setup prompts.
+
+Before continuing, confirm that you reach the graphical desktop and can
+type in a terminal. In that **local desktop terminal**, record:
+
+``` bash
+cat /etc/os-release
+dpkg --print-architecture
+echo "$XDG_SESSION_TYPE"
+pgrep -a labwc
+```
+
+The documented autostart path assumes a Wayland/labwc session. Raspberry
+Pi documents labwc as the default in its
+[desktop configuration guide](https://www.raspberrypi.com/documentation/computers/configuration.html#switch-between-wayland-and-x11).
+If the session differs or labwc is absent, resolve that before following
+the labwc autostart instructions. An SSH shell alone does not establish
+that the local desktop session is running.
+
+The desktop appearing does not mean the Blackboard application is
+installed yet. Continue with the dependencies below, then keyboard
+normalization, HDMI audio, the complete application test, and
+[Desktop Autologin and application autostart](#start-automatically-after-boot).
+Finish with a cold-boot check of typing, speech, Help, and deliberate
+clearing before treating the new card as ready for use.
+
+### Install application dependencies
+
 
 Update the system and install the dependencies:
 
